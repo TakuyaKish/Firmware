@@ -42,8 +42,6 @@
 #include "tailsitter.h"
 #include "vtol_att_control_main.h"
 
-#include <px4_param.h>
-
 #define ARSP_YAW_CTRL_DISABLE 4.0f	// airspeed at which we stop controlling yaw during a front transition
 #define THROTTLE_TRANSITION_MAX 0.25f	// maximum added thrust above last value in transition
 #define PITCH_TRANSITION_FRONT_P1 -1.1f	// pitch angle to switch to TRANSITION_P2
@@ -63,8 +61,8 @@ Tailsitter::Tailsitter(VtolAttitudeControl *attc) :
 
 	_flag_was_in_trans_mode = false;
 
-	_params_handles_tailsitter.front_trans_dur_p2 = param_handle(px4::params::VT_TRANS_P2_DUR);
-	_params_handles_tailsitter.fw_pitch_sp_offset = param_handle(px4::params::FW_PSP_OFF);
+	_params_handles_tailsitter.front_trans_dur_p2 = param_find("VT_TRANS_P2_DUR");
+	_params_handles_tailsitter.fw_pitch_sp_offset = param_find("FW_PSP_OFF");
 }
 
 void
@@ -88,8 +86,7 @@ void Tailsitter::update_vtol_state()
 	 * For the backtransition the pitch is controlled in MC mode again and switches to full MC control reaching the sufficient pitch angle.
 	*/
 
-	Eulerf euler = Quatf(_v_att->q);
-	float pitch = euler.theta();
+	float pitch = Eulerf(Quatf(_v_att->q)).theta();
 
 	if (!_attc->is_fixed_wing_requested()) {
 
@@ -132,11 +129,24 @@ void Tailsitter::update_vtol_state()
 
 		case vtol_mode::TRANSITION_FRONT_P1: {
 
-				bool airspeed_condition_satisfied = _airspeed->indicated_airspeed_m_s >= _params->transition_airspeed;
-				airspeed_condition_satisfied |= _params->airspeed_disabled;
 
-				// check if we have reached airspeed  and pitch angle to switch to TRANSITION P2 mode
-				if ((airspeed_condition_satisfied && pitch <= PITCH_TRANSITION_FRONT_P1) || can_transition_on_ground()) {
+				const bool airspeed_triggers_transition = PX4_ISFINITE(_airspeed_validated->equivalent_airspeed_m_s)
+						&& !_params->airspeed_disabled;
+
+				bool transition_to_fw = false;
+
+				if (pitch <= PITCH_TRANSITION_FRONT_P1) {
+					if (airspeed_triggers_transition) {
+						transition_to_fw = _airspeed_validated->equivalent_airspeed_m_s >= _params->transition_airspeed;
+
+					} else {
+						transition_to_fw = true;
+					}
+				}
+
+				transition_to_fw |= can_transition_on_ground();
+
+				if (transition_to_fw) {
 					_vtol_schedule.flight_mode = vtol_mode::FW_MODE;
 				}
 

@@ -42,8 +42,6 @@
 #include "tiltrotor.h"
 #include "vtol_att_control_main.h"
 
-#include <px4_param.h>
-
 #define ARSP_YAW_CTRL_DISABLE 7.0f	// airspeed at which we stop controlling yaw during a front transition
 
 Tiltrotor::Tiltrotor(VtolAttitudeControl *attc) :
@@ -58,10 +56,10 @@ Tiltrotor::Tiltrotor(VtolAttitudeControl *attc) :
 
 	_flag_was_in_trans_mode = false;
 
-	_params_handles_tiltrotor.tilt_mc = param_handle(px4::params::VT_TILT_MC);
-	_params_handles_tiltrotor.tilt_transition = param_handle(px4::params::VT_TILT_TRANS);
-	_params_handles_tiltrotor.tilt_fw = param_handle(px4::params::VT_TILT_FW);
-	_params_handles_tiltrotor.front_trans_dur_p2 = param_handle(px4::params::VT_TRANS_P2_DUR);
+	_params_handles_tiltrotor.tilt_mc = param_find("VT_TILT_MC");
+	_params_handles_tiltrotor.tilt_transition = param_find("VT_TILT_TRANS");
+	_params_handles_tiltrotor.tilt_fw = param_find("VT_TILT_FW");
+	_params_handles_tiltrotor.front_trans_dur_p2 = param_find("VT_TRANS_P2_DUR");
 }
 
 void
@@ -139,20 +137,25 @@ void Tiltrotor::update_vtol_state()
 			break;
 
 		case vtol_mode::TRANSITION_FRONT_P1: {
-				// allow switch if we are not armed for the sake of bench testing
-				bool transition_to_p2 = can_transition_on_ground();
 
 				float time_since_trans_start = (float)(hrt_absolute_time() - _vtol_schedule.transition_start) * 1e-6f;
 
-				// check if we have reached airspeed to switch to fw mode
-				transition_to_p2 |= !_params->airspeed_disabled &&
-						    _airspeed->indicated_airspeed_m_s >= _params->transition_airspeed &&
-						    time_since_trans_start > _params->front_trans_time_min;
+				const bool airspeed_triggers_transition = PX4_ISFINITE(_airspeed_validated->equivalent_airspeed_m_s)
+						&& !_params->airspeed_disabled;
 
-				// check if airspeed is invalid and transition by time
-				transition_to_p2 |= _params->airspeed_disabled &&
-						    _tilt_control >= _params_tiltrotor.tilt_transition &&
-						    time_since_trans_start > _params->front_trans_time_openloop;
+				bool transition_to_p2 = false;
+
+				if (time_since_trans_start > _params->front_trans_time_min) {
+					if (airspeed_triggers_transition) {
+						transition_to_p2 = _airspeed_validated->equivalent_airspeed_m_s >= _params->transition_airspeed;
+
+					} else {
+						transition_to_p2 = _tilt_control >= _params_tiltrotor.tilt_transition &&
+								   time_since_trans_start > _params->front_trans_time_openloop;;
+					}
+				}
+
+				transition_to_p2 |= can_transition_on_ground();
 
 				if (transition_to_p2) {
 					_vtol_schedule.flight_mode = vtol_mode::TRANSITION_FRONT_P2;
@@ -246,18 +249,20 @@ void Tiltrotor::update_transition_state()
 		_mc_yaw_weight = 1.0f;
 
 		// reduce MC controls once the plane has picked up speed
-		if (!_params->airspeed_disabled && _airspeed->indicated_airspeed_m_s > ARSP_YAW_CTRL_DISABLE) {
+		if (!_params->airspeed_disabled && PX4_ISFINITE(_airspeed_validated->equivalent_airspeed_m_s) &&
+		    _airspeed_validated->equivalent_airspeed_m_s > ARSP_YAW_CTRL_DISABLE) {
 			_mc_yaw_weight = 0.0f;
 		}
 
-		if (!_params->airspeed_disabled && _airspeed->indicated_airspeed_m_s >= _params->airspeed_blend) {
-			_mc_roll_weight = 1.0f - (_airspeed->indicated_airspeed_m_s - _params->airspeed_blend) /
+		if (!_params->airspeed_disabled && PX4_ISFINITE(_airspeed_validated->equivalent_airspeed_m_s) &&
+		    _airspeed_validated->equivalent_airspeed_m_s >= _params->airspeed_blend) {
+			_mc_roll_weight = 1.0f - (_airspeed_validated->equivalent_airspeed_m_s - _params->airspeed_blend) /
 					  (_params->transition_airspeed - _params->airspeed_blend);
 		}
 
 		// without airspeed do timed weight changes
-		if (_params->airspeed_disabled
-		    && time_since_trans_start > _params->front_trans_time_min) {
+		if ((_params->airspeed_disabled || !PX4_ISFINITE(_airspeed_validated->equivalent_airspeed_m_s)) &&
+		    time_since_trans_start > _params->front_trans_time_min) {
 			_mc_roll_weight = 1.0f - (time_since_trans_start - _params->front_trans_time_min) /
 					  (_params->front_trans_time_openloop - _params->front_trans_time_min);
 			_mc_yaw_weight = _mc_roll_weight;

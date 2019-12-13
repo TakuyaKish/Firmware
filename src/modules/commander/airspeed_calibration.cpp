@@ -41,15 +41,14 @@
 #include "calibration_routines.h"
 #include "commander_helper.h"
 
-#include <px4_defines.h>
-#include <px4_param.h>
-#include <px4_posix.h>
-#include <px4_time.h>
+#include <px4_platform_common/defines.h>
+#include <px4_platform_common/posix.h>
+#include <px4_platform_common/time.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
-#include <cmath>
+#include <math.h>
 #include <drivers/drv_hrt.h>
 #include <drivers/drv_airspeed.h>
 #include <uORB/topics/differential_pressure.h>
@@ -107,7 +106,7 @@ int do_airspeed_calibration(orb_advert_t *mavlink_log_pub)
 
 		/* only warn if analog scaling is zero */
 		float analog_scaling = 0.0f;
-		param_get(param_handle(px4::params::SENS_DPRES_ANSC), &(analog_scaling));
+		param_get(param_find("SENS_DPRES_ANSC"), &(analog_scaling));
 
 		if (fabsf(analog_scaling) < 0.1f) {
 			calibration_log_critical(mavlink_log_pub, "[cal] No airspeed sensor found");
@@ -115,8 +114,8 @@ int do_airspeed_calibration(orb_advert_t *mavlink_log_pub)
 		}
 
 		/* set scaling offset parameter */
-		if (param_set(param_handle(px4::params::SENS_DPRES_OFF), &(diff_pres_offset))) {
-			calibration_log_critical(mavlink_log_pub, CAL_ERROR_SET_PARAMS_MSG, 1);
+		if (param_set(param_find("SENS_DPRES_OFF"), &(diff_pres_offset))) {
+			calibration_log_critical(mavlink_log_pub, CAL_ERROR_SET_PARAMS_MSG);
 			goto error_return;
 		}
 	}
@@ -186,8 +185,8 @@ int do_airspeed_calibration(orb_advert_t *mavlink_log_pub)
 			diff_pres_offset = 0.00000001f;
 		}
 
-		if (param_set(param_handle(px4::params::SENS_DPRES_OFF), &(diff_pres_offset))) {
-			calibration_log_critical(mavlink_log_pub, CAL_ERROR_SET_PARAMS_MSG, 1);
+		if (param_set(param_find("SENS_DPRES_OFF"), &(diff_pres_offset))) {
+			calibration_log_critical(mavlink_log_pub, CAL_ERROR_SET_PARAMS_MSG);
 			goto error_return;
 		}
 
@@ -237,8 +236,8 @@ int do_airspeed_calibration(orb_advert_t *mavlink_log_pub)
 					/* the user setup is wrong, wipe the calibration to force a proper re-calibration */
 					diff_pres_offset = 0.0f;
 
-					if (param_set(param_handle(px4::params::SENS_DPRES_OFF), &(diff_pres_offset))) {
-						calibration_log_critical(mavlink_log_pub, CAL_ERROR_SET_PARAMS_MSG, 1);
+					if (param_set(param_find("SENS_DPRES_OFF"), &(diff_pres_offset))) {
+						calibration_log_critical(mavlink_log_pub, CAL_ERROR_SET_PARAMS_MSG);
 						goto error_return;
 					}
 
