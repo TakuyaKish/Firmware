@@ -4,7 +4,7 @@
     <!-- launches Gazebo environment and 2x: MAVROS, PX4 SITL, and spawns vehicle -->
     <!-- vehicle model and world -->
     <arg name="est" default="ekf2"/>
-    <arg name="vehicle" default="iris"/>
+    <arg name="vehicle" default="plane"/>
     <arg name="world" default="$(find mavlink_sitl_gazebo)/worlds/empty.world"/>
     <!-- gazebo configs -->
     <arg name="gui" default="true"/>
@@ -25,7 +25,7 @@
         <arg name="ID" value="0"/>
         <arg name="fcu_url" default="udp://:14540@localhost:14580"/>
         <!-- PX4 SITL and vehicle spawn -->
-        <include file="$(find px4)/launch/single_vehicle_spawn.launch">
+        <include file="$(find connected_uavs_package)/launch/single_vehicle_spawn_sdf.launch">
             <arg name="x" value="0"/>
             <arg name="y" value="0"/>
             <arg name="z" value="0"/>
@@ -51,7 +51,7 @@
         <arg name="ID" value="1"/>
         <arg name="fcu_url" default="udp://:14541@localhost:14581"/>
         <!-- PX4 SITL and vehicle spawn -->
-        <include file="$(find px4)/launch/single_vehicle_spawn.launch">
+        <include file="$(find connected_uavs_package)/launch/single_vehicle_spawn_sdf.launch">
             <arg name="x" value="1"/>
             <arg name="y" value="0"/>
             <arg name="z" value="0"/>
@@ -71,10 +71,35 @@
             <arg name="tgt_component" value="1"/>
         </include>
     </group>
+    <!-- UAV2 -->
+    <!--group ns="uav2"-->
+        <!-- MAVROS and vehicle configs -->
+        <!--arg name="ID" value="2"/-->
+        <!--arg name="fcu_url" default="udp://:14542@localhost:14582"/-->
+        <!-- PX4 SITL and vehicle spawn -->
+        <!--include file="$(find px4)/launch/single_vehicle_spawn_sdf.launch"-->
+            <!--arg name="x" value="0"/-->
+            <!--arg name="y" value="1"/-->
+            <!--arg name="z" value="0"/-->
+            <!--arg name="R" value="0"/-->
+            <!--arg name="P" value="0"/-->
+            <!--arg name="Y" value="0"/-->
+            <!--arg name="vehicle" value="$(arg vehicle)"/-->
+            <!--arg name="mavlink_udp_port" value="14562"/-->
+            <!--arg name="mavlink_tcp_port" value="4562"/-->
+            <!--arg name="ID" value="$(arg ID)"/-->
+        <!--/include-->
+        <!-- MAVROS -->
+        <!--include file="$(find mavros)/launch/px4.launch"-->
+            <!--arg name="fcu_url" value="$(arg fcu_url)"/-->
+            <!--arg name="gcs_url" value=""/-->
+            <!--arg name="tgt_system" value="$(eval 1 + arg('ID'))"/-->
+            <!--arg name="tgt_component" value="1"/-->
+        <!--/include-->
+    <!--/group-->
 </launch>
 <!-- to add more UAVs (up to 10):
 Increase the id
 Change the name space
 Set the FCU to default="udp://:14540+id@localhost:14550+id"
 Set the malink_udp_port to 14560+id) -->
-

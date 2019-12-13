@@ -53,6 +53,9 @@ set(geometry_files
 	quad_y.toml
 	tri_y.toml
 	twin_engine.toml
+	connected_quad_2.toml
+	connected_quad_2w.toml
+	connected_quad_simple.toml
 )
 
 set(geometries_list)

@@ -9,6 +9,8 @@
 #  Otherwise, the variable name goes to the end of the argument.
 #
 
+echo "/////////////////////////////////rc.interface/////////////////////////////////"
+
 set MIXER_AUX_FILE none
 set OUTPUT_AUX_DEV /dev/pwm_output1
 set OUTPUT_DEV none
@@ -100,6 +102,7 @@ then
 
 	if [ $OUTPUT_MODE = io -o $OUTPUT_MODE = uavcan_esc ]
 	then
+		echo "-----------------------------------> /etc/init.d/rc.io"
 		sh /etc/init.d/rc.io
 	fi
 
@@ -110,6 +113,7 @@ then
 	then
 		if [ $OUTPUT_MODE != io ]
 		then
+			echo "-----------------------------------> /etc/init.d/rc.io"
 			sh /etc/init.d/rc.io
 		fi
 	fi
@@ -120,6 +124,7 @@ then
 	#
 	# Load main mixer.
 	#
+	echo "/////Load main mixer/////"
 	if [ $MIXER_AUX = none -a $USE_IO = yes ]
 	then
 		set MIXER_AUX ${MIXER}
@@ -158,8 +163,12 @@ then
 	then
 		set OUTPUT_DEV /dev/tap_esc
 	fi
+	# set OUTPUT_DEV /dev/mkblctrl0
+	echo OUTPUT_DEV: ${OUTPUT_DEV}
 
-	if mixer load ${OUTPUT_DEV} ${MIXER_FILE}
+	# if mixer load ${OUTPUT_DEV} ${MIXER_FILE}
+	if mixer load ${MIXER_FILE}
+	# if mixer load ${OUTPUT_DEV} /home/lis/src/Firmware/ROMFS/px4fmu_common/mixers/octo_x.main.mix
 	then
 		echo "INFO  [init] Mixer: ${MIXER_FILE} on ${OUTPUT_DEV}"
 	else
@@ -182,6 +191,7 @@ then
 	#
 	# Load aux mixer.
 	#
+	echo "/////Load aux mixer/////"
 	if [ -f ${SDCARD_MIXERS_PATH}/${MIXER_AUX}.aux.mix ]
 	then
 		set MIXER_AUX_FILE ${SDCARD_MIXERS_PATH}/${MIXER_AUX}.aux.mix

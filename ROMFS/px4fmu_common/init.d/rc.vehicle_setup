@@ -8,6 +8,9 @@
 #
 # Fixed wing setup.
 #
+
+echo "/////////////////////////////////rc.vehicle_setup/////////////////////////////////"
+
 if [ $VEHICLE_TYPE = fw ]
 then
 	if [ $MIXER = none ]
@@ -72,15 +75,24 @@ then
 		then
 			set MAV_TYPE 15
 		fi
+		if [ $MIXER = connected_quad_2 ]
+		then
+			set MAV_TYPE 14
+		fi
 	fi
+
+	echo MAV_TYPE $MAV_TYPE
+	echo MIXER $MIXER
 
 	# Set the mav type parameter.
 	param set MAV_TYPE ${MAV_TYPE}
 
 	# Load mixer and configure outputs.
+	echo "-----------------------------------> /etc/init.d/rc.interface"
 	sh /etc/init.d/rc.interface
 
 	# Start standard multicopter apps.
+	echo "-----------------------------------> /etc/init.d/rc.mc_apps"
 	sh /etc/init.d/rc.mc_apps
 fi
 
